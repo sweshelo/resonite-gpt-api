@@ -23,6 +23,6 @@
     "ws": "^8.14.1"
   },
   "scripts": {
-    "start": "ts-node src/index.ts"
+    "start": "yarn && ts-node src/index.ts"
   }
 }
