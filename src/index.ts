@@ -139,7 +139,7 @@ import { OpenAIEmbeddings } from "langchain/embeddings/openai";
           ws.send("<CREATE_ASK_WITH_NO_SNIPPET_BUTTON>")
         }
 
-        if (!snippet && related) {
+        if (!snippet && related && related.length > 0) {
           ws.send("<RELATED_QUESTION>")
           for await (const q of related) {
             if (q) ws.send(q)
