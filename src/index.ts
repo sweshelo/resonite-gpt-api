@@ -9,6 +9,7 @@ import fs from "fs"
 import { CheerioWebBaseLoader } from "langchain/document_loaders/web/cheerio";
 import { FaissStore } from "langchain/vectorstores/faiss";
 import { OpenAIEmbeddings } from "langchain/embeddings/openai";
+import {RecursiveCharacterTextSplitter} from 'langchain/text_splitter';
 
 (async () => {
 
@@ -18,6 +19,13 @@ import { OpenAIEmbeddings } from "langchain/embeddings/openai";
     apiKey: process.env.OPENAI_API_KEY,
   });
 
+  type User = {
+    count: number
+  }
+  type Users = {
+    [key in string]: User;
+  }
+  const users: Users = {}
   app.use(bodyParser.json());
 
   // POSTリクエストを処理
@@ -48,7 +56,7 @@ import { OpenAIEmbeddings } from "langchain/embeddings/openai";
         let related = null
 
         // バージョン・ユーザチェック
-        if (!request.version || request.version != '2.3.0') {
+        if (!request.version || request.version != '2.4') {
           ws.send("<STREAM_OPEN>")
           ws.send("Request rejected: Old version - Please check it out new version in Swesh Public.")
           ws.send("<STREAM_CLOSE>")
@@ -65,18 +73,19 @@ import { OpenAIEmbeddings } from "langchain/embeddings/openai";
         if (request.google) {
           ws.send("<STREAM_OPEN>")
           ws.send("<DEBUG_INFO>")
-          ws.send("GPT suggesting investigate query ...\n")
+          ws.send("Debug message ----------------------------\n")
+          ws.send("GPT suggesting investigate query ... ")
           const suggest = await openai.chat.completions.create({
             model: request.model ?? 'gpt-3.5-turbo',
             messages: [
               ...request.thread,
               {
-                'role': 'system', 'content': 'Suggest a Google query to help to generate reply. Write down only a query, and follow input language.'
+                'role': 'system', 'content': 'Generate Google query to search for answers. Write down only a query.'
               }
             ]
           })
           const query = suggest.choices[0].message.content
-          ws.send(`GPT suggested: ${query}\n`)
+          ws.send(`Done.\n`)
           if(!query){
             ws.send("Error.")
             ws.send("<STREAM_CLOSE>")
@@ -99,7 +108,13 @@ import { OpenAIEmbeddings } from "langchain/embeddings/openai";
                 ws.send(`Loading ... `)
                 const docs = await new CheerioWebBaseLoader(site, {
                   selector: 'p'
-                }).load()
+                }).loadAndSplit(
+                  new RecursiveCharacterTextSplitter({
+                    chunkSize: 150,
+                    chunkOverlap: 20,
+                    separators: ['\n\n'],
+                  })
+                )
                 await store.addDocuments(docs)
                 ws.send(`Done.\n`)
               }catch(e){
@@ -116,9 +131,14 @@ import { OpenAIEmbeddings } from "langchain/embeddings/openai";
 
         const lastMessage = request.thread.pop()
 
-        const context = (snippet)
-          ? `Prepared Answer [by ${snippet.source.name}(${snippet.source.link})]: ${snippet.content}`
-          : `Context(You can Ignore): ${(await store.similaritySearch(lastMessage.content, 1))[0].pageContent}`;
+        const date = new Date().toLocaleDateString('ja-JP')
+        const context = `Today is ${date}.\n` + (
+          (snippet)
+          ? `Answers based on the latest information [by ${snippet.source.name}(${snippet.source.link})]: ${snippet.content}`
+          : `Context(may based on the latest information but you can ignore it): ${(await store.similaritySearch(lastMessage.content, 3))[0].pageContent}`
+        )
+
+        console.log(`Answers based on the latest information [by ${snippet?.source.name}(${snippet?.source.link})]: ${snippet?.content}`)
 
         const stream = await openai.chat.completions.create({
           model: request.model ?? 'gpt-3.5-turbo',
@@ -139,7 +159,7 @@ import { OpenAIEmbeddings } from "langchain/embeddings/openai";
           ws.send("<CREATE_ASK_WITH_NO_SNIPPET_BUTTON>")
         }
 
-        if (!snippet && related && related.length > 0) {
+        if (related && related.length > 0) {
           ws.send("<RELATED_QUESTION>")
           for await (const q of related) {
             if (q) ws.send(q)

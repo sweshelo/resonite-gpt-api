@@ -37,7 +37,9 @@ export const investigate = async(query: string) => {
       .filter((u: string | undefined) => u?.startsWith('https://'));
 
     const base = [...doc.querySelectorAll('h2')].filter((e) => e.textContent === 'ウェブページから抽出された強調スニペット')[0]?.parentNode?.querySelector('.V3FYCf')
-    var content = base?.children[0].children[0].textContent
+    var content = (base?.querySelector('table'))
+      ? base?.querySelector('table')?.innerHTML
+      : base?.children[0].children[0].textContent
     var source = { name: base?.querySelector('span.VuuXrf')?.textContent, link: base?.querySelector('a')?.href }
     const urls = [...new Set(siteUrls)].filter((site: string | null) => ngSitesList.map(ngUrl => site?.startsWith(ngUrl)).every(startsWithElement => !startsWithElement)).slice(0, 5)
 
@@ -65,5 +67,3 @@ export const investigate = async(query: string) => {
     console.log(e)
   }
 }
-
-investigate('コーヒーゼリーの発祥')
