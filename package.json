@@ -14,8 +14,11 @@
     "@types/ws": "^8.5.5",
     "body-parser": "^1.20.2",
     "cheerio": "^1.0.0-rc.12",
+    "chromadb": "^1.5.11",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
+    "faiss-node": "^0.5.1",
+    "fs": "^0.0.1-security",
     "https": "^1.0.0",
     "jsdom": "^22.1.0",
     "langchain": "^0.0.169",
@@ -23,6 +26,7 @@
     "ws": "^8.14.1"
   },
   "scripts": {
-    "start": "yarn && ts-node src/index.ts"
+    "start": "yarn && ts-node src/index.ts",
+    "dev": "ts-node src/index.ts"
   }
 }
