@@ -58,7 +58,10 @@ import {RecursiveCharacterTextSplitter} from 'langchain/text_splitter';
         // バージョン・ユーザチェック
         if (!request.version || request.version != '2.4') {
           ws.send("<STREAM_OPEN>")
-          ws.send("Request rejected: Old version - Please check it out new version in Swesh Public.")
+          ws.send("Request rejected: Old version - Please use this new version.")
+          ws.send("<STREAM_CLOSE>")
+          ws.send("<STREAM_OPEN>")
+          ws.send(process.env.RESDB_RECORD_ID ?? '')
           ws.send("<STREAM_CLOSE>")
           return
         }
